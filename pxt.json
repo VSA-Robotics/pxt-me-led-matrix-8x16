@@ -1,0 +1,13 @@
+{
+    "name": "me-led-matrix-8x16",
+    "version": "0.0.1",
+    "description": "MakeCode extension for controlling the Me LED Matrix 8x16",
+    "dependencies": {
+        "core": "*"
+    },
+    "files": [
+        "main.ts"
+    ],
+    "public": true,
+    "license": "MIT"
+}
