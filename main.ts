@@ -5,6 +5,20 @@ namespace ledMatrix {
     let dinPin: DigitalPin;
     let sckPin: DigitalPin;
 
+    // Current pattern being edited (8 rows x 16 columns, as a string grid)
+    let currentPattern: string[] = [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................"
+    ];
+    let cursorRow = 0; // Current row in the grid (0-7)
+    let cursorCol = 0; // Current column in the grid (0-15)
+
     // Low-level communication functions (unchanged from your original)
     function sendBit(bit: number): void {
         pins.digitalWritePin(sckPin, 0);
@@ -53,7 +67,7 @@ namespace ledMatrix {
         endSignal();
     }
 
-    // High-level functions exposed as blocks
+    // High-level functions for matrix control (unchanged core functions, simplified for brevity)
     /**
      * Initialize the LED matrix with the specified pins.
      * @param dinPinParam The pin connected to the matrix's DIN.
@@ -94,30 +108,96 @@ namespace ledMatrix {
         writeBytesToAddress(0, data);
     }
 
-    // **New Feature: Create Pattern from String Grid**
+    // **Pattern Editor Functions**
     /**
-     * Create a custom pattern from a string grid (8 rows x 16 columns).
-     * Use "*" for lit LEDs and "." for off.
-     * @param patternStr A string with 8 lines, each containing 16 characters ("*" or ".").
-     * @returns A 16-byte array representing the pattern.
+     * Start editing a new pattern on the 8x16 grid, initializing all LEDs to off.
      */
-    //% block="create pattern from grid %patternStr"
-    export function createPatternFromString(patternStr: string): number[] {
+    //% block="start pattern editor"
+    export function startPatternEditor(): void {
+        currentPattern = [
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................"
+        ];
+        cursorRow = 0;
+        cursorCol = 0;
+        updatePreview(); // Show initial state on micro:bit
+    }
+
+    /**
+     * Move the cursor up in the pattern grid.
+     */
+    //% block="move cursor up"
+    export function moveCursorUp(): void {
+        if (cursorRow > 0) cursorRow--;
+        updatePreview();
+    }
+
+    /**
+     * Move the cursor down in the pattern grid.
+     */
+    //% block="move cursor down"
+    export function moveCursorDown(): void {
+        if (cursorRow < 7) cursorRow++;
+        updatePreview();
+    }
+
+    /**
+     * Move the cursor left in the pattern grid.
+     */
+    //% block="move cursor left"
+    export function moveCursorLeft(): void {
+        if (cursorCol > 0) cursorCol--;
+        updatePreview();
+    }
+
+    /**
+     * Move the cursor right in the pattern grid.
+     */
+    //% block="move cursor right"
+    export function moveCursorRight(): void {
+        if (cursorCol < 15) cursorCol++;
+        updatePreview();
+    }
+
+    /**
+     * Toggle the LED at the current cursor position (on/off).
+     */
+    //% block="toggle LED at cursor"
+    export function toggleLedAtCursor(): void {
+        let currentRow = currentPattern[cursorRow];
+        currentPattern[cursorRow] = currentRow.substr(0, cursorCol) + 
+            (currentRow[cursorCol] === "." ? "*" : ".") + 
+            currentRow.substr(cursorCol + 1);
+        updatePreview();
+    }
+
+    /**
+     * Display the current pattern on the LED matrix.
+     */
+    //% block="display current pattern"
+    export function displayCurrentPattern(): void {
+        let pattern = createPatternFromString(currentPattern.join("\n"));
+        displayStaticPattern(pattern);
+    }
+
+    // Helper function to convert string grid to byte array
+    function createPatternFromString(patternStr: string): number[] {
         let pattern: number[] = [];
         let rows = patternStr.trim().split("\n");
-        
-        // Check if we have exactly 8 rows
         if (rows.length !== 8) {
             serial.writeLine("Pattern must have exactly 8 rows.");
             return [];
         }
-
-        // Process each column (16 total)
         for (let col = 0; col < 16; col++) {
             let byte = 0;
             for (let row = 0; row < 8; row++) {
                 let line = rows[row].trim();
-                // Check if each row has exactly 16 characters
                 if (line.length !== 16) {
                     serial.writeLine("Each row must have exactly 16 characters.");
                     return [];
@@ -130,4 +210,40 @@ namespace ledMatrix {
         }
         return pattern;
     }
+
+    // Helper function to update a preview on the micro:bit's 5x5 LED grid
+    function updatePreview(): void {
+        // Convert the current 8x16 pattern to a 5x5 preview (simplified)
+        let preview: boolean[][] = Array(5).fill(null).map(() => Array(5).fill(false));
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                let matrixRow = row * 2; // Scale down 8 rows to 5
+                let matrixCol = col * 3; // Scale down 16 columns to 5
+                if (matrixRow < 8 && matrixCol < 16) {
+                    preview[row][col] = currentPattern[matrixRow][matrixCol] === "*";
+                }
+            }
+        }
+        // Display on micro:bit LED (simplified, shows cursor position as well)
+        basic.clearScreen();
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                if (preview[row][col]) {
+                    led.plot(col, row);
+                }
+            }
+        }
+        // Show cursor position (e.g., as a brighter or different color if possible)
+        led.plotBrightness(cursorCol % 5, cursorRow % 5, 255);
+    }
+
+    // Initial setup for pattern editor
+    basic.forever(function () {
+        // Use buttons and gestures for navigation (optional, for interactivity)
+        input.onButtonPressed(Button.A, moveCursorLeft);
+        input.onButtonPressed(Button.B, moveCursorRight);
+        input.onButtonPressed(Button.AB, toggleLedAtCursor);
+        input.onGesture(Gesture.Shake, moveCursorUp);
+        input.onGesture(Gesture.TiltLeft, moveCursorDown);
+    });
 }
