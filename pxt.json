@@ -1,6 +1,6 @@
 {
     "name": "me-led-matrix-8x16",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "MakeCode extension for controlling the Me LED Matrix 8x16",
     "dependencies": {
         "core": "*"
