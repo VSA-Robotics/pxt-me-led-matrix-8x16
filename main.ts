@@ -5,15 +5,34 @@ namespace ledMatrix {
     let dinPin: DigitalPin;
     let sckPin: DigitalPin;
 
-    // Font dictionary for text display (8x8 pixel characters)
+    // Font dictionary for text display (supports A-Z and space)
     let font: { [key: string]: number[] } = {
         "A": [0x38, 0x44, 0x44, 0x7C, 0x44, 0x44, 0x44, 0x00],
         "B": [0x78, 0x44, 0x44, 0x78, 0x44, 0x44, 0x78, 0x00],
         "C": [0x38, 0x44, 0x40, 0x40, 0x40, 0x44, 0x38, 0x00],
-        "H": [0x44, 0x44, 0x44, 0x7C, 0x44, 0x44, 0x44, 0x00],
+        "D": [0x78, 0x44, 0x44, 0x44, 0x44, 0x44, 0x78, 0x00],
         "E": [0x7C, 0x40, 0x40, 0x78, 0x40, 0x40, 0x7C, 0x00],
+        "F": [0x7C, 0x40, 0x40, 0x78, 0x40, 0x40, 0x40, 0x00],
+        "G": [0x38, 0x44, 0x40, 0x40, 0x4C, 0x44, 0x38, 0x00],
+        "H": [0x44, 0x44, 0x44, 0x7C, 0x44, 0x44, 0x44, 0x00],
+        "I": [0x38, 0x10, 0x10, 0x10, 0x10, 0x10, 0x38, 0x00],
+        "J": [0x04, 0x04, 0x04, 0x04, 0x44, 0x44, 0x38, 0x00],
+        "K": [0x44, 0x48, 0x50, 0x60, 0x50, 0x48, 0x44, 0x00],
         "L": [0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x7C, 0x00],
+        "M": [0x44, 0x6C, 0x54, 0x44, 0x44, 0x44, 0x44, 0x00],
+        "N": [0x44, 0x44, 0x64, 0x54, 0x4C, 0x44, 0x44, 0x00],
         "O": [0x38, 0x44, 0x44, 0x44, 0x44, 0x44, 0x38, 0x00],
+        "P": [0x78, 0x44, 0x44, 0x78, 0x40, 0x40, 0x40, 0x00],
+        "Q": [0x38, 0x44, 0x44, 0x44, 0x54, 0x48, 0x34, 0x00],
+        "R": [0x78, 0x44, 0x44, 0x78, 0x50, 0x48, 0x44, 0x00],
+        "S": [0x38, 0x44, 0x40, 0x38, 0x04, 0x44, 0x38, 0x00],
+        "T": [0x7C, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00],
+        "U": [0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x38, 0x00],
+        "V": [0x44, 0x44, 0x44, 0x44, 0x28, 0x10, 0x00, 0x00],
+        "W": [0x44, 0x44, 0x44, 0x54, 0x6C, 0x44, 0x44, 0x00],
+        "X": [0x44, 0x44, 0x28, 0x10, 0x28, 0x44, 0x44, 0x00],
+        "Y": [0x44, 0x44, 0x28, 0x10, 0x10, 0x10, 0x10, 0x00],
+        "Z": [0x7C, 0x04, 0x08, 0x10, 0x20, 0x40, 0x7C, 0x00],
         " ": [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
     };
 
@@ -28,11 +47,15 @@ namespace ledMatrix {
             0b00000000, 0b00111100, 0b01000010, 0b10100101, 0b10000001, 0b10100101,
             0b01000010, 0b00111100, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
             0b00000000, 0b00000000, 0b00000000, 0b00000000
+        ],
+        "arrow": [
+            0b00001000, 0b00011100, 0b00111110, 0b01111111, 0b00011100, 0b00011100,
+            0b00011100, 0b00011100, 0b00011100, 0b00011100, 0b00011100, 0b00011100,
+            0b00011100, 0b00011100, 0b00011100, 0b00000000
         ]
     };
 
     // **Low-level communication functions**
-    // Send a single bit to the matrix
     function sendBit(bit: number): void {
         pins.digitalWritePin(sckPin, 0);
         pins.digitalWritePin(dinPin, bit);
@@ -41,14 +64,12 @@ namespace ledMatrix {
         control.waitMicros(2);
     }
 
-    // Send a full byte (8 bits) to the matrix
     function sendByte(byte: number): void {
         for (let i = 7; i >= 0; i--) {
             sendBit((byte >> i) & 1);
         }
     }
 
-    // Start signal for communication with the matrix
     function startSignal(): void {
         pins.digitalWritePin(sckPin, 0);
         control.waitMicros(1);
@@ -57,7 +78,6 @@ namespace ledMatrix {
         pins.digitalWritePin(dinPin, 0);
     }
 
-    // End signal for communication with the matrix
     function endSignal(): void {
         pins.digitalWritePin(sckPin, 0);
         control.waitMicros(2);
@@ -67,7 +87,6 @@ namespace ledMatrix {
         pins.digitalWritePin(dinPin, 1);
     }
 
-    // Write an array of bytes to a specific address on the matrix
     function writeBytesToAddress(address: number, data: number[]): void {
         if (address > 15 || data.length == 0) return;
         startSignal();
@@ -94,8 +113,8 @@ namespace ledMatrix {
     export function initMatrix(dinPinParam: DigitalPin, sckPinParam: DigitalPin): void {
         dinPin = dinPinParam;
         sckPin = sckPinParam;
-        turnOnScreen(); // Turn on the matrix
-        clearScreen();  // Clear it initially
+        turnOnScreen();
+        clearScreen();
     }
 
     /**
@@ -119,20 +138,18 @@ namespace ledMatrix {
     //% block="scroll text %text|at speed %speed"
     export function displayScrollingText(text: string, speed: number): void {
         let textPattern: number[] = [];
-        // Build the pattern by concatenating font data for each character
         for (let char of text.toUpperCase()) {
             if (font[char]) {
                 textPattern = textPattern.concat(font[char]);
             } else {
-                textPattern = textPattern.concat([0, 0, 0, 0, 0, 0, 0, 0]); // Default to empty space
+                textPattern = textPattern.concat([0, 0, 0, 0, 0, 0, 0, 0]);
             }
         }
         let totalColumns = textPattern.length / 8;
         let columnData = transposePattern(textPattern, totalColumns);
-        // Scroll the text across the matrix
         for (let startCol = 0; startCol <= columnData.length - 16; startCol++) {
             let displayData = columnData.slice(startCol, startCol + 16);
-            while (displayData.length < 16) displayData.push(0); // Pad with zeros if needed
+            while (displayData.length < 16) displayData.push(0);
             showRows(displayData);
             basic.pause(speed);
         }
@@ -140,7 +157,7 @@ namespace ledMatrix {
 
     /**
      * Display a pre-defined pattern.
-     * @param patternName The name of the pattern (e.g., "heart", "smiley").
+     * @param patternName The name of the pattern (e.g., "heart", "smiley", "arrow").
      */
     //% block="display pattern %patternName"
     export function displayPattern(patternName: string): void {
@@ -162,13 +179,11 @@ namespace ledMatrix {
     }
 
     // **Helper functions**
-    // Display a row of data on the matrix
     function showRows(data: number[]): void {
         clearScreen();
         writeBytesToAddress(0, data);
     }
 
-    // Turn on the matrix display
     function turnOnScreen(): void {
         startSignal();
         sendByte(0b10100000); // Turn-on command
@@ -178,7 +193,6 @@ namespace ledMatrix {
         endSignal();
     }
 
-    // Transpose a row-based pattern to column-based data for the matrix
     function transposePattern(pattern: number[], totalColumns: number): number[] {
         let columnData: number[] = [];
         for (let col = 0; col < totalColumns * 8; col++) {
@@ -191,5 +205,78 @@ namespace ledMatrix {
             columnData.push(byte);
         }
         return columnData;
+    }
+
+    // **New and Amazing Features**
+    /**
+     * Create a custom pattern from a string grid.
+     * @param patternStr A string representing the pattern (e.g., "........\n.*......\n..*.....").
+     * @returns A 16-byte array representing the pattern.
+     */
+    //% block="create pattern from string %patternStr"
+    export function createPatternFromString(patternStr: string): number[] {
+        let pattern: number[] = [];
+        let rows = patternStr.trim().split("\n");
+        if (rows.length !== 8) {
+            serial.writeLine("Pattern must have 8 rows.");
+            return [];
+        }
+        for (let col = 0; col < 16; col++) {
+            let byte = 0;
+            for (let row = 0; row < 8; row++) {
+                let line = rows[row];
+                if (line.length !== 16) {
+                    serial.writeLine("Each row must have 16 characters.");
+                    return [];
+                }
+                if (line[col] === "*") {
+                    byte |= (1 << row);
+                }
+            }
+            pattern.push(byte);
+        }
+        return pattern;
+    }
+
+    /**
+     * Display a sequence of patterns with a delay between each.
+     * @param sequence An array of 16-byte patterns.
+     * @param delayMs The delay between patterns in milliseconds.
+     */
+    //% block="display pattern sequence %sequence|with delay %delayMs ms"
+    export function displayPatternSequence(sequence: number[][], delayMs: number): void {
+        for (let i = 0; i < sequence.length; i++) {
+            if (sequence[i].length !== 16) {
+                serial.writeLine("Each pattern must have 16 bytes.");
+                return;
+            }
+            showRows(sequence[i]);
+            basic.pause(delayMs);
+        }
+    }
+
+    /**
+     * Set the brightness of the LED matrix.
+     * @param level The brightness level (0-7).
+     */
+    //% block="set brightness to %level"
+    export function setBrightness(level: number): void {
+        if (level < 0 || level > 7) {
+            serial.writeLine("Brightness level must be between 0 and 7.");
+            return;
+        }
+        startSignal();
+        sendByte(0b10001000 | level); // Brightness command
+        endSignal();
+    }
+
+    /**
+     * Turn off the LED matrix screen.
+     */
+    //% block="turn off LED matrix screen"
+    export function turnOffScreen(): void {
+        startSignal();
+        sendByte(0b10000000); // Turn-off command
+        endSignal();
     }
 }
