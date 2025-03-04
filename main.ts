@@ -1,7 +1,7 @@
 // main.ts for Me LED Matrix 8x16 MakeCode Extension
 
 namespace ledMatrix {
-    // Global variables to store the pin configuration
+    // Global variables for pin configuration
     let dinPin: DigitalPin;
     let sckPin: DigitalPin;
 
@@ -20,7 +20,7 @@ namespace ledMatrix {
     let cursorCol = 0; // Current column in the grid (0-15)
 
     // Font dictionary for text display (supports A-Z and space)
-    let font: { [key: string]: number[] } = {
+    const font: { [key: string]: number[] } = {
         "A": [0x38, 0x44, 0x44, 0x7C, 0x44, 0x44, 0x44, 0x00],
         "B": [0x78, 0x44, 0x44, 0x78, 0x44, 0x44, 0x78, 0x00],
         "C": [0x38, 0x44, 0x40, 0x40, 0x40, 0x44, 0x38, 0x00],
@@ -51,7 +51,7 @@ namespace ledMatrix {
     };
 
     // Pre-defined patterns (16 bytes each, representing 8 rows x 16 columns)
-    let patterns: { [key: string]: number[] } = {
+    const patterns: { [key: string]: number[] } = {
         "heart": [
             0b00000000, 0b01100110, 0b11111111, 0b11111111, 0b11111111, 0b01111110,
             0b00111100, 0b00011000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
@@ -102,7 +102,7 @@ namespace ledMatrix {
     }
 
     function writeBytesToAddress(address: number, data: number[]): void {
-        if (address > 15 || data.length == 0) return;
+        if (address > 15 || data.length === 0) return;
         startSignal();
         sendByte(0b01000000); // Auto-increment mode
         endSignal();
@@ -141,8 +141,8 @@ namespace ledMatrix {
      */
     //% block="display static pattern %pattern"
     export function displayStaticPattern(pattern: number[]): void {
-        if (pattern.length !== 16) {
-            serial.writeLine("Pattern must have 16 bytes.");
+        if (!pattern || pattern.length !== 16) {
+            serial.writeLine("Pattern must be a 16-byte array.");
             return;
         }
         writeBytesToAddress(0, pattern);
@@ -165,6 +165,10 @@ namespace ledMatrix {
      */
     //% block="scroll text %text|at speed %speed"
     export function displayScrollingText(text: string, speed: number): void {
+        if (!text || speed < 0) {
+            serial.writeLine("Invalid text or speed.");
+            return;
+        }
         let textPattern: number[] = [];
         for (let char of text.toUpperCase()) {
             if (font[char]) {
@@ -189,11 +193,11 @@ namespace ledMatrix {
      */
     //% block="display pattern %patternName"
     export function displayPattern(patternName: string): void {
-        if (patterns[patternName]) {
-            displayStaticPattern(patterns[patternName]);
-        } else {
+        if (!patterns[patternName]) {
             serial.writeLine("Pattern not found.");
+            return;
         }
+        displayStaticPattern(patterns[patternName]);
     }
 
     /**
@@ -229,6 +233,10 @@ namespace ledMatrix {
      */
     //% block="create pattern from string %patternStr"
     export function createPatternFromString(patternStr: string): number[] {
+        if (!patternStr) {
+            serial.writeLine("Pattern string is required.");
+            return [];
+        }
         let pattern: number[] = [];
         let rows = patternStr.trim().split("\n");
         if (rows.length !== 8) {
@@ -240,7 +248,7 @@ namespace ledMatrix {
             for (let row = 0; row < 8; row++) {
                 let line = rows[row].trim();
                 if (line.length !== 16) {
-                    serial.writeLine("Each row must have 16 characters.");
+                    serial.writeLine("Each row must have exactly 16 characters.");
                     return [];
                 }
                 if (line[col] === "*") {
@@ -259,6 +267,10 @@ namespace ledMatrix {
      */
     //% block="display pattern sequence %sequence|with delay %delayMs ms"
     export function displayPatternSequence(sequence: number[][], delayMs: number): void {
+        if (!sequence || sequence.length === 0 || delayMs < 0) {
+            serial.writeLine("Invalid sequence or delay.");
+            return;
+        }
         for (let i = 0; i < sequence.length; i++) {
             if (sequence[i].length !== 16) {
                 serial.writeLine("Each pattern must have 16 bytes.");
@@ -284,7 +296,6 @@ namespace ledMatrix {
 ................        
 ................        
 ................`): void {
-        // Default to an empty pattern if no string provided
         let patternLines = patternStr.trim().split("\n");
         if (patternLines.length !== 8) {
             serial.writeLine("Pattern must have 8 rows.");
@@ -343,7 +354,7 @@ namespace ledMatrix {
         ];
         cursorRow = 0;
         cursorCol = 0;
-        updatePreview(); // Show initial state on micro:bit
+        updatePreview();
     }
 
     /**
@@ -421,7 +432,7 @@ namespace ledMatrix {
     // Helper function to update a preview on the micro:bit's 5x5 LED grid
     function updatePreview(): void {
         // Convert the current 8x16 pattern to a 5x5 preview (simplified)
-        let preview: boolean[][] = Array(5).fill(null).map(() => Array(5).fill(false));
+        let preview: boolean[][] = Array(5).fill(false).map(() => Array(5).fill(false));
         for (let row = 0; row < 5; row++) {
             for (let col = 0; col < 5; col++) {
                 let matrixRow = Math.floor(row * 8 / 5); // Scale 8 rows to 5
