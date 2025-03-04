@@ -308,7 +308,7 @@ namespace ledMatrix {
                 serial.writeLine("Each row must have 16 characters.");
                 return "................".substr(0, 16);
             }
-            return line.substr(0, 16).replace(/[^.*]/g, ".");
+            return line.substr(0, 16).replace("[^.\\*]", "."); // Fixed RegExp issue
         });
 
         // Show the pattern on serial for editing (simulating a pop-up)
@@ -432,7 +432,7 @@ namespace ledMatrix {
     // Helper function to update a preview on the micro:bit's 5x5 LED grid
     function updatePreview(): void {
         // Convert the current 8x16 pattern to a 5x5 preview (simplified)
-        let preview: boolean[][] = Array(5).fill(false).map(() => Array(5).fill(false));
+        let preview: boolean[][] = Array.from({ length: 5 }, () => Array(5).fill(false));
         for (let row = 0; row < 5; row++) {
             for (let col = 0; col < 5; col++) {
                 let matrixRow = Math.floor(row * 8 / 5); // Scale 8 rows to 5
