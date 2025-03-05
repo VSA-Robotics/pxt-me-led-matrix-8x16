@@ -1,194 +1,254 @@
-//% color="#AA278D" weight=100
-namespace LedMatrix {
-    // Global variables for pins and buffer
-    let sckPin: DigitalPin;
-    let dinPin: DigitalPin;
-    let matrixBuffer: number[] = new Array(16).fill(0);
+// main.ts for Me LED Matrix 8x16 MakeCode Extension
 
-    // Font definition for scrolling text (5 columns per character)
-    const font: { [key: string]: number[] } = {
-        'A': [0x1C, 0x22, 0x22, 0x3E, 0x22],
-        'B': [0x3C, 0x22, 0x3C, 0x22, 0x3C],
-        'C': [0x1C, 0x22, 0x20, 0x22, 0x1C],
-        'H': [0x22, 0x22, 0x3E, 0x22, 0x22],
-        'E': [0x3E, 0x20, 0x3C, 0x20, 0x3E],
-        'L': [0x20, 0x20, 0x20, 0x20, 0x3E],
-        'O': [0x1C, 0x22, 0x22, 0x22, 0x1C],
-        'W': [0x22, 0x22, 0x2A, 0x2A, 0x14],
-        'R': [0x3C, 0x22, 0x3C, 0x28, 0x24],
-        'D': [0x3C, 0x22, 0x22, 0x22, 0x3C],
-        ' ': [0x00, 0x00, 0x00, 0x00, 0x00]
-        // Add more characters as needed
+namespace ledMatrix {
+    // Global variables to store the pin configuration
+    // Global variables for pin configuration
+    let dinPin: DigitalPin;
+    let sckPin: DigitalPin;
+
+    // Font dictionary for text display (supports A-Z and space)
+    let font: { [key: string]: number[] } = {
+        "A": [0x38, 0x44, 0x44, 0x7C, 0x44, 0x44, 0x44, 0x00],
+        "B": [0x78, 0x44, 0x44, 0x78, 0x44, 0x44, 0x78, 0x00],
+        "C": [0x38, 0x44, 0x40, 0x40, 0x40, 0x44, 0x38, 0x00],
+        "D": [0x78, 0x44, 0x44, 0x44, 0x44, 0x44, 0x78, 0x00],
+        "E": [0x7C, 0x40, 0x40, 0x78, 0x40, 0x40, 0x7C, 0x00],
+        "F": [0x7C, 0x40, 0x40, 0x78, 0x40, 0x40, 0x40, 0x00],
+        "G": [0x38, 0x44, 0x40, 0x40, 0x4C, 0x44, 0x38, 0x00],
+        "H": [0x44, 0x44, 0x44, 0x7C, 0x44, 0x44, 0x44, 0x00],
+        "I": [0x38, 0x10, 0x10, 0x10, 0x10, 0x10, 0x38, 0x00],
+        "J": [0x04, 0x04, 0x04, 0x04, 0x44, 0x44, 0x38, 0x00],
+        "K": [0x44, 0x48, 0x50, 0x60, 0x50, 0x48, 0x44, 0x00],
+        "L": [0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x7C, 0x00],
+        "M": [0x44, 0x6C, 0x54, 0x44, 0x44, 0x44, 0x44, 0x00],
+        "N": [0x44, 0x44, 0x64, 0x54, 0x4C, 0x44, 0x44, 0x00],
+        "O": [0x38, 0x44, 0x44, 0x44, 0x44, 0x44, 0x38, 0x00],
+        "P": [0x78, 0x44, 0x44, 0x78, 0x40, 0x40, 0x40, 0x00],
+        "Q": [0x38, 0x44, 0x44, 0x44, 0x54, 0x48, 0x34, 0x00],
+        "R": [0x78, 0x44, 0x44, 0x78, 0x50, 0x48, 0x44, 0x00],
+        "S": [0x38, 0x44, 0x40, 0x38, 0x04, 0x44, 0x38, 0x00],
+        "T": [0x7C, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x00],
+        "U": [0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x38, 0x00],
+        "V": [0x44, 0x44, 0x44, 0x44, 0x28, 0x10, 0x00, 0x00],
+        "W": [0x44, 0x44, 0x44, 0x54, 0x6C, 0x44, 0x44, 0x00],
+        "X": [0x44, 0x44, 0x28, 0x10, 0x28, 0x44, 0x44, 0x00],
+        "Y": [0x44, 0x44, 0x28, 0x10, 0x10, 0x10, 0x10, 0x00],
+        "Z": [0x7C, 0x04, 0x08, 0x10, 0x20, 0x40, 0x7C, 0x00],
+        " ": [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
     };
 
-    // Low-level communication functions
-    function sendBit(bit: number) {
+    // Pre-defined patterns (16 bytes each, representing 8 rows x 16 columns)
+    let patterns: { [key: string]: number[] } = {
+        "heart": [
+            0b00000000, 0b01100110, 0b11111111, 0b11111111, 0b11111111, 0b01111110,
+            0b00111100, 0b00011000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
+            0b00000000, 0b00000000, 0b00000000, 0b00000000
+        ],
+        "smiley": [
+            0b00000000, 0b00111100, 0b01000010, 0b10100101, 0b10000001, 0b10100101,
+            0b01000010, 0b00111100, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
+            0b00000000, 0b00000000, 0b00000000, 0b00000000
+        ],
+        "arrow": [
+            0b00001000, 0b00011100, 0b00111110, 0b01111111, 0b00011100, 0b00011100,
+            0b00011100, 0b00011100, 0b00011100, 0b00011100, 0b00011100, 0b00011100,
+            0b00011100, 0b00011100, 0b00011100, 0b00000000
+        ]
+    };
+
+    // **Low-level communication functions**
+    // Low-level communication functions (unchanged from your original)
+    function sendBit(bit: number): void {
         pins.digitalWritePin(sckPin, 0);
         pins.digitalWritePin(dinPin, bit);
-        control.waitMicros(2);
-        pins.digitalWritePin(sckPin, 1);
-        control.waitMicros(2);
-    }
-
-    function sendByte(byte: number) {
-        for (let i = 7; i >= 0; i--) {
-            sendBit((byte >> i) & 1);
-        }
-    }
-
-    function startSignal() {
-        pins.digitalWritePin(sckPin, 0);
-        control.waitMicros(1);
-        pins.digitalWritePin(sckPin, 1);
-        pins.digitalWritePin(dinPin, 1);
-        pins.digitalWritePin(dinPin, 0);
-    }
-
-    function endSignal() {
-        pins.digitalWritePin(sckPin, 0);
-        control.waitMicros(2);
-        pins.digitalWritePin(dinPin, 0);
-        pins.digitalWritePin(sckPin, 1);
-        control.waitMicros(1);
-        pins.digitalWritePin(dinPin, 1);
-    }
-
-    function writeBytesToAddress(address: number, data: number[]) {
-        if (address > 15 || data.length === 0) return;
-        startSignal();
-        sendByte(0b01000000); // Auto-increment mode
-        endSignal();
-        startSignal();
-        sendByte(0b11000000); // Starting at address 0
-        for (let k = 0; k < data.length; k++) {
-            sendByte(data[k]);
-        }
-        endSignal();
-        startSignal();
-        sendByte(0b10001000); // Display on, default brightness
+@@ -103,7 +53,7 @@ namespace ledMatrix {
         endSignal();
     }
 
-    function showRows(data: number[]) {
-        writeBytesToAddress(0, data);
-    }
-
-    function clearScreen() {
-        let data = new Array(16).fill(0);
-        writeBytesToAddress(0, data);
-    }
-
-    function turnOnScreen() {
-        startSignal();
-        sendByte(0b10001000); // Display on, default brightness
-        endSignal();
-        clearScreen();
-    }
-
-    // Exported block functions
-
+    // **High-level functions exposed as blocks**
+    // High-level functions exposed as blocks
     /**
-     * Initialize the LED matrix with specified SCK and DIN pins.
-     * @param sck Serial clock pin
-     * @param din Data in pin
-     */
-    //% block="initialize LED matrix with SCK %sck and DIN %din"
-    export function initialize(sck: DigitalPin, din: DigitalPin) {
-        sckPin = sck;
-        dinPin = din;
-        pins.digitalWritePin(dinPin, 1);
-        pins.digitalWritePin(sckPin, 1);
+     * Initialize the LED matrix with the specified pins.
+     * @param dinPinParam The pin connected to the matrix's DIN.
+@@ -113,8 +63,12 @@ namespace ledMatrix {
+    export function initMatrix(dinPinParam: DigitalPin, sckPinParam: DigitalPin): void {
+        dinPin = dinPinParam;
+        sckPin = sckPinParam;
         turnOnScreen();
+        clearScreen();
+        let data = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+        startSignal();
+        sendByte(0b10100000); // Turn-on command
+        writeBytesToAddress(0, data);
+        endSignal();
     }
 
     /**
-     * Set an individual LED in the 8x16 matrix.
-     * @param row Logical row (0–7, top to bottom)
-     * @param col Logical column (0–15, left to right)
-     * @param state 1 to turn on, 0 to turn off
-     */
-    //% block="set LED at row %row|column %col|to %state"
-    export function setLed(row: number, col: number, state: number) {
-        if (row < 0 || row >= 8 || col < 0 || col >= 16) return;
-        const hardwareRow = col;
-        const hardwareCol = row;
-        if (state) {
-            matrixBuffer[hardwareRow] |= (1 << hardwareCol);
-        } else {
-            matrixBuffer[hardwareRow] &= ~(1 << hardwareCol);
+@@ -127,45 +81,7 @@ namespace ledMatrix {
+            serial.writeLine("Pattern must have 16 bytes.");
+            return;
         }
+        showRows(pattern);
     }
 
     /**
-     * Update the display to reflect the current buffer.
+     * Display scrolling text on the LED matrix.
+     * @param text The text to scroll.
+     * @param speed The speed of scrolling in milliseconds.
      */
-    //% block="update display"
-    export function updateDisplay() {
-        showRows(matrixBuffer);
-    }
-
-    /**
-     * Clear the display, turning all LEDs off.
-     */
-    //% block="clear display"
-    export function clear() {
-        matrixBuffer = new Array(16).fill(0);
-        updateDisplay();
-    }
-
-    /**
-     * Display an 8x16 image on the matrix.
-     * @param image 2D array (8 rows x 16 columns) of 0s and 1s
-     */
-    //% block="display image %image"
-    export function displayImage(image: number[][]) {
-        for (let c = 0; c < 16; c++) {
-            let byteVal = 0;
-            for (let r = 0; r < 8; r++) {
-                if (image[r][c]) byteVal |= (1 << r);
-            }
-            matrixBuffer[c] = byteVal;
-        }
-        updateDisplay();
-    }
-
-    // Helper function for scrolling text
-    function getMessageBitmap(text: string): number[] {
-        let bitmap: number[] = [];
-        for (let i = 0; i < 16; i++) bitmap.push(0);
-        for (let char of text) {
+    //% block="scroll text %text|at speed %speed"
+    export function displayScrollingText(text: string, speed: number): void {
+        let textPattern: number[] = [];
+        for (let char of text.toUpperCase()) {
             if (font[char]) {
-                bitmap = bitmap.concat(font[char]);
+                textPattern = textPattern.concat(font[char]);
             } else {
-                bitmap = bitmap.concat(font[' ']);
+                textPattern = textPattern.concat([0, 0, 0, 0, 0, 0, 0, 0]);
             }
-            bitmap.push(0);
         }
-        if (text.length > 0) bitmap.pop();
-        for (let i = 0; i < 16; i++) bitmap.push(0);
-        return bitmap;
-    }
-
-    function displayMessage(bitmap: number[], startCol: number) {
-        for (let c = 0; c < 16; c++) {
-            let msgCol = startCol + c;
-            matrixBuffer[c] = (msgCol >= 0 && msgCol < bitmap.length) ? bitmap[msgCol] : 0;
-        }
-        updateDisplay();
-    }
-
-    /**
-     * Scroll text across the matrix from right to left.
-     * @param text String to scroll
-     * @param speed Delay between frames in milliseconds
-     */
-    //% block="scroll text %text|with speed %speed"
-    export function scrollText(text: string, speed: number) {
-        let bitmap = getMessageBitmap(text);
-        let maxStartCol = bitmap.length - 16;
-        for (let startCol = 0; startCol <= maxStartCol; startCol++) {
-            displayMessage(bitmap, startCol);
+        let totalColumns = textPattern.length / 8;
+        let columnData = transposePattern(textPattern, totalColumns);
+        for (let startCol = 0; startCol <= columnData.length - 16; startCol++) {
+            let displayData = columnData.slice(startCol, startCol + 16);
+            while (displayData.length < 16) displayData.push(0);
+            showRows(displayData);
             basic.pause(speed);
         }
+    }
+
+    /**
+     * Display a pre-defined pattern.
+     * @param patternName The name of the pattern (e.g., "heart", "smiley", "arrow").
+     */
+    //% block="display pattern %patternName"
+    export function displayPattern(patternName: string): void {
+        if (patterns[patternName]) {
+            displayStaticPattern(patterns[patternName]);
+        } else {
+            serial.writeLine("Pattern not found.");
+        }
+        writeBytesToAddress(0, pattern);
+    }
+
+    /**
+@@ -178,105 +94,40 @@ namespace ledMatrix {
+        writeBytesToAddress(0, data);
+    }
+
+    // **Helper functions**
+    function showRows(data: number[]): void {
+        clearScreen();
+        writeBytesToAddress(0, data);
+    }
+
+    function turnOnScreen(): void {
+        startSignal();
+        sendByte(0b10100000); // Turn-on command
+        let myData = [];
+        for (let i = 0; i < 16; i++) myData.push(0x00);
+        showRows(myData);
+        endSignal();
+    }
+
+    function transposePattern(pattern: number[], totalColumns: number): number[] {
+        let columnData: number[] = [];
+        for (let col = 0; col < totalColumns * 8; col++) {
+            let byte = 0;
+            for (let row = 0; row < 8; row++) {
+                if ((pattern[row * totalColumns + (col >> 3)] & (1 << (7 - (col % 8)))) !== 0) {
+                    byte |= (1 << row);
+                }
+            }
+            columnData.push(byte);
+        }
+        return columnData;
+    }
+
+    // **New and Amazing Features**
+    // **New Feature: Create Pattern from String Grid**
+    /**
+     * Create a custom pattern from a string grid.
+     * @param patternStr A string representing the pattern (e.g., "........\n.*......\n..*.....").
+     * Create a custom pattern from a string grid (8 rows x 16 columns).
+     * Use "*" for lit LEDs and "." for off.
+     * @param patternStr A string with 8 lines, each containing 16 characters ("*" or ".").
+     * @returns A 16-byte array representing the pattern.
+     */
+    //% block="create pattern from string %patternStr"
+    //% block="create pattern from grid %patternStr"
+    export function createPatternFromString(patternStr: string): number[] {
+        let pattern: number[] = [];
+        let rows = patternStr.trim().split("\n");
+        
+        // Check if we have exactly 8 rows
+        if (rows.length !== 8) {
+            serial.writeLine("Pattern must have 8 rows.");
+            serial.writeLine("Pattern must have exactly 8 rows.");
+            return [];
+        }
+
+        // Process each column (16 total)
+        for (let col = 0; col < 16; col++) {
+            let byte = 0;
+            for (let row = 0; row < 8; row++) {
+                let line = rows[row];
+                let line = rows[row].trim();
+                // Check if each row has exactly 16 characters
+                if (line.length !== 16) {
+                    serial.writeLine("Each row must have 16 characters.");
+                    serial.writeLine("Each row must have exactly 16 characters.");
+                    return [];
+                }
+                if (line[col] === "*") {
+                    byte |= (1 << row);
+                    byte |= (1 << row); // Set the bit for this row if "*"
+                }
+            }
+            pattern.push(byte);
+        }
+        return pattern;
+    }
+
+    /**
+     * Display a sequence of patterns with a delay between each.
+     * @param sequence An array of 16-byte patterns.
+     * @param delayMs The delay between patterns in milliseconds.
+     */
+    //% block="display pattern sequence %sequence|with delay %delayMs ms"
+    export function displayPatternSequence(sequence: number[][], delayMs: number): void {
+        for (let i = 0; i < sequence.length; i++) {
+            if (sequence[i].length !== 16) {
+                serial.writeLine("Each pattern must have 16 bytes.");
+                return;
+            }
+            showRows(sequence[i]);
+            basic.pause(delayMs);
+        }
+    }
+
+    /**
+     * Set the brightness of the LED matrix.
+     * @param level The brightness level (0-7).
+     */
+    //% block="set brightness to %level"
+    export function setBrightness(level: number): void {
+        if (level < 0 || level > 7) {
+            serial.writeLine("Brightness level must be between 0 and 7.");
+            return;
+        }
+        startSignal();
+        sendByte(0b10001000 | level); // Brightness command
+        endSignal();
+    }
+
+    /**
+     * Turn off the LED matrix screen.
+     */
+    //% block="turn off LED matrix screen"
+    export function turnOffScreen(): void {
+        startSignal();
+        sendByte(0b10000000); // Turn-off command
+        endSignal();
     }
 }
