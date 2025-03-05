@@ -90,6 +90,7 @@ namespace ledMatrix {
      * @param dinPinParam The pin connected to the matrix's DIN.
      * @param sckPinParam The pin connected to the matrix's SCK.
      */
+    //% block="initialize LED matrix with DIN %dinPinParam|SCK %sckPinParam"
     export function initMatrix(dinPinParam: DigitalPin, sckPinParam: DigitalPin): void {
         dinPin = dinPinParam;
         sckPin = sckPinParam;
@@ -101,6 +102,7 @@ namespace ledMatrix {
      * Display a static pattern on the LED matrix.
      * @param pattern An array of 16 bytes representing the pattern.
      */
+    //% block="display static pattern %pattern"
     export function displayStaticPattern(pattern: number[]): void {
         if (pattern.length !== 16) {
             serial.writeLine("Pattern must have 16 bytes.");
@@ -114,6 +116,7 @@ namespace ledMatrix {
      * @param text The text to scroll.
      * @param speed The speed of scrolling in milliseconds.
      */
+    //% block="scroll text %text|at speed %speed"
     export function displayScrollingText(text: string, speed: number): void {
         let textPattern: number[] = [];
         // Build the pattern by concatenating font data for each character
@@ -139,6 +142,7 @@ namespace ledMatrix {
      * Display a pre-defined pattern.
      * @param patternName The name of the pattern (e.g., "heart", "smiley").
      */
+    //% block="display pattern %patternName"
     export function displayPattern(patternName: string): void {
         if (patterns[patternName]) {
             displayStaticPattern(patterns[patternName]);
@@ -150,6 +154,7 @@ namespace ledMatrix {
     /**
      * Clear the LED matrix screen.
      */
+    //% block="clear LED matrix screen"
     export function clearScreen(): void {
         let data = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -179,7 +184,7 @@ namespace ledMatrix {
         for (let col = 0; col < totalColumns * 8; col++) {
             let byte = 0;
             for (let row = 0; row < 8; row++) {
-                if ((pattern[row * totalColumns + col >> 3] & (1 << (7 - (col % 8)))) !== 0) {
+                if ((pattern[row * totalColumns + (col >> 3)] & (1 << (7 - (col % 8)))) !== 0) {
                     byte |= (1 << row);
                 }
             }
