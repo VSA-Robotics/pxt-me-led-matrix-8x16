@@ -432,13 +432,11 @@ namespace ledMatrix {
     // Helper function to update a preview on the micro:bit's 5x5 LED grid
     function updatePreview(): void {
         // Convert the current 8x16 pattern to a 5x5 preview (simplified)
-        let preview: boolean[][] = [];
-        for (let i = 0; i < 5; i++) {
-            preview[i] = [];
-            for (let j = 0; j < 5; j++) {
-                preview[i][j] = false;
-            }
-        }
+        let preview: boolean[][] = [[false, false, false, false, false],
+                                   [false, false, false, false, false],
+                                   [false, false, false, false, false],
+                                   [false, false, false, false, false],
+                                   [false, false, false, false, false]];
         for (let row = 0; row < 5; row++) {
             for (let col = 0; col < 5; col++) {
                 let matrixRow = Math.floor(row * 8 / 5); // Scale 8 rows to 5
