@@ -1,13 +1,22 @@
 {
-    "name": "pxt-me-led-matrix-8x16",
-    "version": "0.0.10",
-    "description": "MakeCode extension for controlling the Me LED Matrix 8x16",
+    "name": "led-matrix",
+    "version": "0.0.3",
+    "description": "An extension for controlling an 8x16 LED matrix on the micro:bit",
+    "license": "MIT",
     "dependencies": {
-        "core": "*"
+        "core": "*",
+        "device": "*"
     },
     "files": [
-        "main.ts"
+        "main.ts",
+        "test.ts"
     ],
-    "public": true,
-    "license": "MIT"
+    "testFiles": [
+        "test.ts"
+    ],
+    "supportedTargets": [
+        "microbit"
+    ],
+    "preferredEditor": "blocks",
+    "public": true
 }
